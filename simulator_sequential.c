@@ -6,30 +6,38 @@
 #include "simulator_sequential.h"
 #include <pthread.h>
 
-void readElevationFile(const char * elevationFilename, int ** elevation, int N) {
+int ** readElevationFile(const char * elevationFilename, int N) {
     FILE * elevationFile = fopen(elevationFilename, "r");
     if (elevationFile == NULL) {
         perror("Could not open elevation_file!");
         exit(EXIT_FAILURE);
     }
-    char * curr = NULL;
-    int * row = NULL;
-    size_t sz;
+    int ** elevation = malloc(N * sizeof(*elevation));
+    for (int i = 0; i < N; i++) {
+        elevation[i] = malloc(N * sizeof(**elevation));
+    }
+    int currNum;
     int i = 0;
-    while (getline(&curr, &sz, elevationFile) >= 0) {
-        //elevation = realloc(elevation, (i + 1) * sizeof(*elevation));
-        // row = malloc(N * sizeof(*row));
-        printf("%d\n", atoi(curr));
-        free(curr);
-        curr = NULL;
+    while (fscanf(elevationFile, "%d", &currNum) == 1) {
+        elevation[i/N][i%N] = currNum;
         i++;
     }
-    //free(elevation);
     if (fclose(elevationFile) != 0) {
         perror("Failed to close elevation_file!");
         exit(EXIT_FAILURE);
     }
+    return elevation;
+}
 
+void freeElevation(int ** elevation, int N) {
+    for (int j = 0; j < N; j++) {
+        for(int k = 0; k < N; k++) {
+            printf("%d ", elevation[j][k]);
+        }
+        printf("\n");
+        free(elevation[j]);
+    }
+    free(elevation);
 }
 
 //TODO TEST
@@ -106,6 +114,9 @@ void freeFlowMatrix(double ** flowMatrix, size_t n){
         free(flowMatrix[i]);
     }
 }
+// int *** getDirection(int ** elevationMatrix, int N) {
+
+// }
 
 int main(int argc, char *argv[]) {
     if (argc != 6) {
@@ -117,8 +128,7 @@ int main(int argc, char *argv[]) {
     int N = atoi(argv[4]);
     const char * elevationFilename = argv[5];
 
-    int ** elevation = NULL;
-    readElevationFile(elevationFilename, elevation, N);
+    int ** elevation = readElevationFile(elevationFilename, N);
     int *** direction = NULL;
     double ** absorption = NULL;
     double ** totalAccumulation = NULL;
@@ -141,5 +151,6 @@ int main(int argc, char *argv[]) {
         }
         printf("\n");
     }
+    freeElevation(elevation, N);
     return EXIT_SUCCESS;
 }
