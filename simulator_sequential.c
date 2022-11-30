@@ -91,9 +91,9 @@ void freeDirection(int *** direction, int N) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             for (int k = 0; k < 5; k++) {
-                printf("%d ", direction[i][j][k]);
+                // printf("%d ", direction[i][j][k]);
             }
-            printf("\n");
+            // printf("\n");
             free(direction[i][j]);
         }
         free(direction[i]);
@@ -102,7 +102,7 @@ void freeDirection(int *** direction, int N) {
 }
 
 //TODO TEST
-void drop(double** ground, size_t n){
+void drop(double** ground, int n){
     for(int i = 0; i < n; i++){
         for(int j = 0; j < n; j++){
             ground[i][j] += 1.0;
@@ -111,7 +111,7 @@ void drop(double** ground, size_t n){
 }
 
 //TODO TEST
-void absorb(double ** ground, double amount, double ** absorption, size_t n){
+void absorb(double ** ground, double amount, double ** absorption, int n){
     for(int i = 0; i < n; i++){
         for(int j = 0; j < n; j++){
             absorption[i][j] += ground[i][j] >= amount ? amount : ground[i][j];
@@ -121,33 +121,25 @@ void absorb(double ** ground, double amount, double ** absorption, size_t n){
 }
 
 //TODO TEST
-bool flow(double ** result, int *** direction, size_t n){
+bool flow(double ** result, int *** direction, int n){
     bool wet = false;
-    double ** flowMatrix = malloc(n * sizeof(double *));
-    for(int i = 0; i < n; i++){
-        double * array = malloc(n * sizeof(double));
-        for(int j = 0; j < n; j++){
-            array[j] = 0.0;
-        }
-        flowMatrix[i] = array;
-    }
+    double ** flowMatrix = initializeDoubleMatrix(n);
 
     for(int i =0; i < n; i++){
         for(int j = 0; j < n; j++){
             if(result[i][j]>0){
                 wet = true;
-                direction[i][j];
                 int * modularPos = direction[i][j];
-                size_t modularSize = sizeof(modularPos) / sizeof(modularPos[0]);
+                int modularPosSize = 5;
                 int validSize = 0;
-                for(int p = 0; p < modularSize; p++){
+                for(int p = 0; p < modularPosSize; p++){
                     if(modularPos[p] >= 0){
                         validSize++;
                     }
                 } 
                 double dropToFlow = result[i][j] >= 1.0 ? 1.0 : result[i][j];
                 double fractionDrop = dropToFlow / validSize;
-                for(int k = 0; k < validSize; ++k){
+                for(int k = 0; k < modularPosSize; ++k){
                     if(modularPos[k] >= 0){
                         int currX = modularPos[k]/n;
                         int currY = modularPos[k]%n;
@@ -160,15 +152,40 @@ bool flow(double ** result, int *** direction, size_t n){
             }
         }
     }
+
+    for(int i=0;i<n;++i){
+        for(int j=0;j<n;++j){
+        result[i][j] += flowMatrix[i][j];
+        }
+    }
+
     freeFlowMatrix(flowMatrix, n);
     free(flowMatrix);
     return wet;
 }
 
-void freeFlowMatrix(double ** flowMatrix, size_t n){
+void freeFlowMatrix(double ** flowMatrix, int n){
     for(int i =0; i < n; i++){
         free(flowMatrix[i]);
     }
+}
+
+double ** initializeDoubleMatrix(int N) {
+    double ** matrix = malloc(N * sizeof(*matrix));
+    for (int i = 0; i < N; i++) {
+        matrix[i] = malloc(N * sizeof(**matrix));
+        for (int j = 0; j < N; j++) {
+            matrix[i][j] = 0.0;
+        }
+    }
+    return matrix;
+}
+
+void freeDoubleMatrix(double ** matrix, int N) {
+    for (int i = 0; i < N; i++) {
+        free(matrix[i]);
+    }
+    free(matrix);
 }
 
 int main(int argc, char *argv[]) {
@@ -183,40 +200,39 @@ int main(int argc, char *argv[]) {
 
     int ** elevation = readElevationFile(elevationFilename, N);
     int *** direction = getDirection(elevation, N);
-    double ** absorption = NULL;
-    double ** totalAccumulation = NULL;
+    double ** absorption = initializeDoubleMatrix(N);
+    double ** totalAccumulation = initializeDoubleMatrix(N);
     
     struct timespec startTime, endTime;
     int currentStep = 0;
 
-    //TODO TEST
-    //float elapsed_ns = calc_time(start_time, end_time);
+    // TODO TEST
+    float elapsed_ns = calc_time(startTime, endTime);
 
-    // bool keepSimulate = true;
-    // while(keepSimulate){
-    //   if(currentStep <rainSteps){
-    //     drop(result);
-    //   }
-    //   absorb(result,absorptionRate,absorption);
-    //   keepSimulate = flow(result, direction);
-    //   totalSteps++;
-    // }
+    bool keepSimulate = true;
+    while(keepSimulate){
+      if(currentStep < M){
+        drop(totalAccumulation, N);
+      }
+      absorb(totalAccumulation, A, absorption, N);
+      keepSimulate = flow(totalAccumulation, direction, N);
+      currentStep++;
+    }
     
-    float elapsed_ns = 0.0;
     printf("Rainfall simulation took %d time steps to complete.\n", currentStep); 
     printf("Runtime = %f seconds\n", elapsed_ns / 1000000000); 
     printf("\n");
     printf("The following grid shows the number of raindrops absorbed at each point:\n");
-    size_t sizeAbsorption = sizeof(absorption) / sizeof(absorption[0]);
-    size_t sizeSubAbsorption = sizeof(absorption[0]) / sizeof(absorption[0][0]);
-    for(int i = 0; i < sizeAbsorption; i++){
-        for(int j = 0; j < sizeSubAbsorption; j++){
+    for(int i = 0; i < N; i++){
+        for(int j = 0; j < N; j++){
             printf("%8f", absorption[i][j]);
         }
         printf("\n");
     }
     freeElevation(elevation, N);
     freeDirection(direction, N);
-    
+    freeDoubleMatrix(absorption, N);
+    freeDoubleMatrix(totalAccumulation, N);
+
     return EXIT_SUCCESS;
 }
