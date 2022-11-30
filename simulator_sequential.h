@@ -5,11 +5,11 @@
 #include <time.h>
 #include <pthread.h>
 
-int * getModularPos(int n, int i, int j, vector<vector<int> > & elevationMatrix);
+int * getModularPos(int n, int i, int j, int ** elevationMatrix);
 int *** getDirection(int ** elevationMatrix);
-void drop(float** ground);
-void absorb(float ** ground, float amount, float ** absorption);
-bool flow(float ** result, int *** direction);
+void drop(double** ground);
+void absorb(double ** ground, double amount, double ** absorption);
+bool flow(double ** result, int *** direction);
 
 
 
