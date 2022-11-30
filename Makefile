@@ -2,8 +2,8 @@ TARGETS=rainfall_seq
 
 all: $(TARGETS)
 
-rainfall_seq: simulator_sequential.cpp simulator_sequential.hpp
-	g++ -O3 -std=c++11 -o simulator_seq simulator_sequential.cpp
+rainfall_seq: simulator_sequential.c simulator_sequential.h
+	gcc -O3 -o simulator_seq simulator_sequential.c 
 
 clean:
 	rm -rf $(TARGETS)
