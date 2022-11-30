@@ -13,6 +13,7 @@ void freeDirection(int *** direction, int N);
 void drop(double** ground);
 void absorb(double ** ground, double amount, double ** absorption);
 bool flow(double ** result, int *** direction);
+void freeFlowMatrix(double ** flowMatrix, size_t n);
 
 
 
