@@ -102,10 +102,8 @@ void freeDirection(int *** direction, int N) {
 }
 
 //TODO TEST
-void drop(double** ground){
-    size_t m = sizeof(ground) / sizeof(ground[0]);
-    size_t n = sizeof(ground[0]) / sizeof(ground[0][0]);
-    for(int i = 0; i < m; i++){
+void drop(double** ground, size_t n){
+    for(int i = 0; i < n; i++){
         for(int j = 0; j < n; j++){
             ground[i][j] += 1.0;
         }
@@ -113,10 +111,8 @@ void drop(double** ground){
 }
 
 //TODO TEST
-void absorb(double ** ground, double amount, double ** absorption){
-    size_t m = sizeof(ground) / sizeof(ground[0]);
-    size_t n = sizeof(ground[0]) / sizeof(ground[0][0]);
-    for(int i = 0; i < m; i++){
+void absorb(double ** ground, double amount, double ** absorption, size_t n){
+    for(int i = 0; i < n; i++){
         for(int j = 0; j < n; j++){
             absorption[i][j] += ground[i][j] >= amount ? amount : ground[i][j];
             ground[i][j] -= amount;
@@ -125,8 +121,7 @@ void absorb(double ** ground, double amount, double ** absorption){
 }
 
 //TODO TEST
-bool flow(double ** result, int *** direction){
-    size_t n = sizeof(result) / sizeof(result[0]);
+bool flow(double ** result, int *** direction, size_t n){
     bool wet = false;
     double ** flowMatrix = malloc(n * sizeof(double *));
     for(int i = 0; i < n; i++){
@@ -196,6 +191,17 @@ int main(int argc, char *argv[]) {
 
     //TODO TEST
     //float elapsed_ns = calc_time(start_time, end_time);
+
+    // bool keepSimulate = true;
+    // while(keepSimulate){
+    //   if(currentStep <rainSteps){
+    //     drop(result);
+    //   }
+    //   absorb(result,absorptionRate,absorption);
+    //   keepSimulate = flow(result, direction);
+    //   totalSteps++;
+    // }
+    
     float elapsed_ns = 0.0;
     printf("Rainfall simulation took %d time steps to complete.\n", currentStep); 
     printf("Runtime = %f seconds\n", elapsed_ns / 1000000000); 
