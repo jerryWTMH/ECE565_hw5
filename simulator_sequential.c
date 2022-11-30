@@ -7,22 +7,19 @@
 #include <pthread.h>
 
 int ** readElevationFile(const char * elevationFilename, int N) {
-    int ** elevation = NULL;
     FILE * elevationFile = fopen(elevationFilename, "r");
     if (elevationFile == NULL) {
         perror("Could not open elevation_file!");
         exit(EXIT_FAILURE);
     }
+    int ** elevation = malloc(N * sizeof(*elevation));
+    for (int i = 0; i < N; i++) {
+        elevation[i] = malloc(N * sizeof(**elevation));
+    }
     int currNum;
     int i = 0;
-    int * row = NULL;
     while (fscanf(elevationFile, "%d", &currNum) == 1) {
-        if (i % N == 0) {
-            elevation = realloc(elevation, (i + 1) * sizeof(*elevation));
-            row = malloc(N * sizeof(*row));
-            elevation[i/N] = row;
-        }
-        row[i%N] = currNum;
+        elevation[i/N][i%N] = currNum;
         i++;
     }
     if (fclose(elevationFile) != 0) {
@@ -42,6 +39,10 @@ void freeElevation(int ** elevation, int N) {
     }
     free(elevation);
 }
+
+// int *** getDirection(int ** elevationMatrix, int N) {
+
+// }
 
 int main(int argc, char *argv[]) {
     if (argc != 6) {
