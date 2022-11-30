@@ -75,18 +75,35 @@ bool flow(double ** result, int *** direction){
                 direction[i][j];
                 int * modularPos = direction[i][j];
                 size_t modularSize = sizeof(modularPos) / sizeof(modularPos[0]);
+                int validSize = 0;
+                for(int p = 0; p < modularSize; p++){
+                    if(modularPos[p] >= 0){
+                        validSize++;
+                    }
+                } 
                 double dropToFlow = result[i][j] >= 1.0 ? 1.0 : result[i][j];
-                double fractionDrop = dropToFlow / modularSize;
-                for(int k = 0; k < modularSize; ++k){
-                    int currX = modularPos[k]/n;
-                    int currY = modularPos[k]%n;
-                    flowMatrix[currX][currY] += fractionDrop;
+                double fractionDrop = dropToFlow / validSize;
+                for(int k = 0; k < validSize; ++k){
+                    if(modularPos[k] >= 0){
+                        int currX = modularPos[k]/n;
+                        int currY = modularPos[k]%n;
+                        flowMatrix[currX][currY] += fractionDrop;
+                    }
                 }
                 flowMatrix[i][j] -= dropToFlow;
             }else{
                 result[i][j] = 0.0;
             }
         }
+    }
+    freeFlowMatrix(flowMatrix, n);
+    free(flowMatrix);
+    return wet;
+}
+
+void freeFlowMatrix(double ** flowMatrix, size_t n){
+    for(int i =0; i < n; i++){
+        free(flowMatrix[i]);
     }
 }
 
@@ -113,14 +130,14 @@ int main(int argc, char *argv[]) {
     //float elapsed_ns = calc_time(start_time, end_time);
     float elapsed_ns = 0.0;
     printf("Rainfall simulation took %d time steps to complete.\n", currentStep); 
-    printf("Runtime = %d seconds\n", elapsed_ns / 1000000000); 
+    printf("Runtime = %f seconds\n", elapsed_ns / 1000000000); 
     printf("\n");
     printf("The following grid shows the number of raindrops absorbed at each point:\n");
     size_t sizeAbsorption = sizeof(absorption) / sizeof(absorption[0]);
     size_t sizeSubAbsorption = sizeof(absorption[0]) / sizeof(absorption[0][0]);
     for(int i = 0; i < sizeAbsorption; i++){
         for(int j = 0; j < sizeSubAbsorption; j++){
-            printf("%8d", absorption[i][j]);
+            printf("%8f", absorption[i][j]);
         }
         printf("\n");
     }
