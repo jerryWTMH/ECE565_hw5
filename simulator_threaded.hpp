@@ -20,4 +20,4 @@ double ** initializeDoubleMatrix(int N);
 void freeDoubleMatrix(double ** matrix, int N);
 void dropAndAbsorb(double** ground, double amount, double ** absorption, int n, int startRow, int endRow, bool stillRain);
 void absorb(double ** ground, double amount, double ** absorption, int n, int startRow, int endRow);
-bool flow(double ** result, int *** direction, int n);
+void flow(double ** result, int *** direction, int n, bool* wet);

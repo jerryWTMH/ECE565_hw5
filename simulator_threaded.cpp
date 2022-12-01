@@ -126,14 +126,12 @@ void absorb(double ** ground, double amount, double ** absorption, int n, int st
 }
 
 //TODO TEST
-bool flow(double ** result, int *** direction, int n){
-    bool wet = false;
-    double ** flowMatrix = initializeDoubleMatrix(n);
-
+void flow(double ** result, int *** direction, int n, bool * wet){
+    std::vector<std::vector<double>> flowMatrix(n, std::vector<double>(n, 0.0));
     for(int i =0; i < n; i++){
         for(int j = 0; j < n; j++){
             if(result[i][j]>0){
-                wet = true;
+                *wet = true;
                 int * modularPos = direction[i][j];
                 int modularPosSize = 5;
                 double validSize = 0;
@@ -165,9 +163,6 @@ bool flow(double ** result, int *** direction, int n){
         result[i][j] += flowMatrix[i][j];
         }
     }
-
-    freeDoubleMatrix(flowMatrix, n);
-    return wet;
 }
 
 
@@ -239,7 +234,8 @@ int main(int argc, char *argv[]) {
             }
             // make sure all done before moving on
         // make sure all done before moving on
-        keepSimulate = flow(totalAccumulation, direction, N);
+        keepSimulate = false;
+        flow(totalAccumulation, direction, N, &keepSimulate);
         currentStep++;
     }
     endTime = clock();
