@@ -1,88 +1,242 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <time.h>
 #include "simulator_sequential.hpp"
 
-#include <bits/stdc++.h>
-
-#include <iostream>
-#include <string>
-
-using namespace std;
-
-double calc_time(struct timespec start, struct timespec end) {
-  double start_sec =
-    (double)start.tv_sec * 1000000000.0 + (double)start.tv_nsec;
-  double end_sec = (double)end.tv_sec * 1000000000.0 + (double)end.tv_nsec;
-
-  if (end_sec < start_sec) {
-    return 0;
-  } else {
-    return end_sec - start_sec;
-  }
+int ** readElevationFile(const char * elevationFilename, int N) {
+    FILE * elevationFile = fopen(elevationFilename, "r");
+    if (elevationFile == NULL) {
+        perror("Could not open elevation_file!");
+        exit(EXIT_FAILURE);
+    }
+    int ** elevation = (int **)malloc(N * sizeof(*elevation));
+    for (int i = 0; i < N; i++) {
+        elevation[i] = (int *)malloc(N * sizeof(**elevation));
+    }
+    int currNum;
+    int i = 0;
+    while (fscanf(elevationFile, "%d", &currNum) == 1) {
+        elevation[i/N][i%N] = currNum;
+        i++;
+    }
+    if (fclose(elevationFile) != 0) {
+        perror("Failed to close elevation_file!");
+        exit(EXIT_FAILURE);
+    }
+    return elevation;
 }
 
-int main(int argc, char **argv) {
-    if (argc != 6) {
-      cout << "Syntax: ./rainfall_seq <P> <M> <A> <N> <elevation_file>" << endl;
-      cout << "P = # of parallel threads to use" << endl;
-      cout << "M = # of simulation time steps during which a rain drop will fall on each landcape point" << endl;
-      cout << "A = absorption rate" << endl;
-      cout << "N = dimension of the landscape(NxN)" << endl;
-      cout << "elevation_file = name of input file that specifies the elevation of each point" << endl;
-      return EXIT_FAILURE;
-    }
-    int rainSteps = stoi(argv[2]);
-    float absorptionRate = stof(argv[3]);
-    int N = stoi(argv[4]);
-    string elevationFile = argv[5];
-    float runtime;
-
-    vector<vector<int>> elevation(N, vector<int>());
-    vector<vector<vector<int>>> direction;
-    vector<vector<float>> absorption(N, vector<float>(N,0));
-    vector<vector<float>> result(N, vector<float>(N,0));
-    struct timespec start_time, end_time;
-    int totalSteps = 0;
-    fstream input(elevationFile);
-    string line;
-    int eleValue;
-
-    if (input) {
-      int row = 0;
-
-      while (getline(input, line)) {
-        stringstream ss(line);
-        while (ss >> eleValue) {
-            elevation[row].push_back(eleValue);
+void freeElevation(int ** elevation, int N) {
+    for (int j = 0; j < N; j++) {
+        for(int k = 0; k < N; k++) {
+            // printf("%d ", elevation[j][k]);
         }
-        ++row;
-      }
-    } else {
-      cout << "No such elevationFile" << endl;
-      return EXIT_FAILURE;
+        // printf("\n");
+        free(elevation[j]);
     }
-    clock_gettime(CLOCK_MONOTONIC, &start_time);
+    free(elevation);
+}
+
+void findMinPostion(int *** direction, int ** elevation, int i, int j, int N) {
+    // includes current position
+    int dx[] = {0, 0, 1, 0, -1};
+    int dy[] = {0, -1, 0, 1, 0};
+    int numOfPos = 5;
+    int minElev = elevation[i][j];
+    for (int k = 0; k < numOfPos; k++) {
+        int x = j + dx[k];
+        int y = i + dy[k];
+        if (x >= 0 && y >= 0 && x < N && y < N){
+            int currElev = elevation[y][x];
+            minElev = currElev < minElev ? currElev : minElev;
+        }
+    }
+    bool minIsSelf = false;
+    for (int k = 0; k < numOfPos; k++) {
+        int x = j + dx[k];
+        int y = i + dy[k];
+        if (x >= 0 && y >= 0 && x < N && y < N){
+            int currElev = elevation[y][x];
+            if (currElev == minElev && !minIsSelf) {
+                direction[i][j][k] = y * N + x;
+                if (k == 0) { // current position is minElev then don't need to check neigh
+                    minIsSelf = true;
+                }
+            } else {
+                direction[i][j][k] = -1;
+            }
+        } else {
+            direction[i][j][k] = -1;
+        }
+    }
     
-    direction = getDirection(elevation);
+}
+
+int *** getDirection(int ** elevation, int N) {
+    int *** direction = (int ***)malloc(N * sizeof(*direction));
+    for (int i = 0; i < N; i++) {
+        direction[i] = (int **)malloc(N * sizeof(**direction));
+        for (int j = 0; j < N; j++) {
+            direction[i][j] = (int *)malloc((5) * sizeof(***direction));
+            findMinPostion(direction, elevation, i, j, N);
+        }
+    }
+    return direction;
+}
+
+void freeDirection(int *** direction, int N) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            for (int k = 0; k < 5; k++) {
+                // printf("%d ", direction[i][j][k]);
+            }
+            // printf("\n");
+            free(direction[i][j]);
+        }
+        free(direction[i]);
+    }
+    free(direction);
+}
+
+//TODO TEST
+void drop(double** ground, int n){
+    for(int i = 0; i < n; i++){
+        for(int j = 0; j < n; j++){
+            ground[i][j] += 1.0;
+        }
+    }
+}
+
+//TODO TEST
+void absorb(double ** ground, double amount, double ** absorption, int n){
+    for(int i = 0; i < n; i++){
+        for(int j = 0; j < n; j++){
+            absorption[i][j] += ground[i][j] >= amount ? amount : ground[i][j];
+            ground[i][j] -= amount;
+        }
+    }
+}
+
+//TODO TEST
+bool flow(double ** result, int *** direction, int n){
+    bool wet = false;
+    double ** flowMatrix = initializeDoubleMatrix(n);
+
+    for(int i =0; i < n; i++){
+        for(int j = 0; j < n; j++){
+            if(result[i][j]>0){
+                wet = true;
+                int * modularPos = direction[i][j];
+                int modularPosSize = 5;
+                double validSize = 0;
+                for(int p = 0; p < modularPosSize; p++){
+                    if(modularPos[p] >= 0){
+                        validSize++;
+                    }
+                } 
+                double dropToFlow = result[i][j] >= 1.0 ? 1.0 : result[i][j];
+                double fractionDrop = dropToFlow / validSize;
+                for(int k = 0; k < modularPosSize; ++k){
+                    if(modularPos[k] >= 0){
+                        int currX = modularPos[k]/n;
+                        int currY = modularPos[k]%n;
+                        flowMatrix[currX][currY] += fractionDrop;
+                    }
+                }
+                flowMatrix[i][j] -= dropToFlow;
+            }else{
+                result[i][j] = 0.0;
+            }
+        }
+    }
+
+    for(int i=0;i<n;++i){
+        for(int j=0;j<n;++j){
+        result[i][j] += flowMatrix[i][j];
+        }
+    }
+
+    freeFlowMatrix(flowMatrix, n);
+    free(flowMatrix);
+    return wet;
+}
+
+void freeFlowMatrix(double ** flowMatrix, int n){
+    for(int i =0; i < n; i++){
+        free(flowMatrix[i]);
+    }
+}
+
+double ** initializeDoubleMatrix(int N) {
+    double ** matrix = (double **)malloc(N * sizeof(*matrix));
+    for (int i = 0; i < N; i++) {
+        matrix[i] = (double *)malloc(N * sizeof(**matrix));
+        for (int j = 0; j < N; j++) {
+            matrix[i][j] = 0.0;
+        }
+    }
+    return matrix;
+}
+
+void freeDoubleMatrix(double ** matrix, int N) {
+    for (int i = 0; i < N; i++) {
+        free(matrix[i]);
+    }
+    free(matrix);
+}
+
+int main(int argc, char *argv[]) {
+    if (argc != 6) {
+        printf("Syntax: ./simulator_seq <P> <M> <A> <N> <elevation_file>\n");
+        return EXIT_FAILURE;
+    }
+    int M = atoi(argv[2]);
+    double A = atof(argv[3]);
+    int N = atoi(argv[4]);
+    const char * elevationFilename = argv[5];
+
+    int ** elevation = readElevationFile(elevationFilename, N);
+    int *** direction = getDirection(elevation, N);
+    double ** absorption = initializeDoubleMatrix(N);
+    double ** totalAccumulation = initializeDoubleMatrix(N);
+    
+    clock_t startTime, endTime;
+    startTime = clock();
+    int currentStep = 0;
+
+
+    // TODO TEST
+
     bool keepSimulate = true;
     while(keepSimulate){
-      if(totalSteps<rainSteps){
-        drop(result);
+      if(currentStep < M){
+        drop(totalAccumulation, N);
       }
-      absorb(result,absorptionRate,absorption);
-      keepSimulate = flow(result, direction);
-      totalSteps++;
+      absorb(totalAccumulation, A, absorption, N);
+      keepSimulate = flow(totalAccumulation, direction, N);
+      currentStep++;
     }
+    endTime = clock();
+    double elapsed_s = ((double)(endTime - startTime))/CLOCKS_PER_SEC;
+    
+    printf("Rainfall simulation took %d time steps to complete.\n", currentStep); 
+    printf("Runtime = %f seconds\n", elapsed_s); 
+    printf("\n");
+    printf("The following grid shows the number of raindrops absorbed at each point:\n");
+    for(int i = 0; i < N; i++){
+        for(int j = 0; j < N; j++){
+            // printf("%8.4f", absorption[i][j]);
+            std::cout << std::setw(8) << std::setprecision(6) << absorption[i][j];
+        }
+        // printf("\n");
+        std::cout << std::endl;
+    }
+    freeElevation(elevation, N);
+    freeDirection(direction, N);
+    freeDoubleMatrix(absorption, N);
+    freeDoubleMatrix(totalAccumulation, N);
 
-    clock_gettime(CLOCK_MONOTONIC, &end_time);
-    float elapsed_ns = calc_time(start_time, end_time);
-    cout << "Rainfall simulation took " << totalSteps << " time steps to complete." << endl;
-    cout << "Runtime = " << elapsed_ns / 1000000000 << " seconds" << endl;
-    cout << endl;
-    cout << "The following grid shows the number of raindrops absorbed at each point:" << endl;
-    for (auto r : absorption) {
-      for (auto c : r) {
-          cout << setw(8) << setprecision(6) << c;
-      }
-      cout << endl;
-    }
-    return 0;
+    return EXIT_SUCCESS;
 }

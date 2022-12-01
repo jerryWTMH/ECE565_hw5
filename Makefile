@@ -2,8 +2,8 @@ TARGETS=simulator_seq
 
 all: $(TARGETS)
 
-simulator_seq: simulator_sequential.c simulator_sequential.h
-	gcc -O3 -o simulator_seq simulator_sequential.c 
+simulator_seq: simulator_sequential.cpp simulator_sequential.hpp
+	g++ -O3 -o simulator_seq simulator_sequential.cpp 
 
 clean:
-	rm -rf $(TARGETS) test*.out
+	rm -rf $(TARGETS)
