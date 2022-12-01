@@ -1,8 +1,3 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <time.h>
 #include "simulator_sequential.hpp"
 
 int ** readElevationFile(const char * elevationFilename, int N) {
