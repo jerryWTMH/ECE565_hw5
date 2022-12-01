@@ -104,10 +104,14 @@ void freeDirection(int *** direction, int N) {
 }
 
 //TODO TEST
-void drop(double** ground, int n, int startRow, int endRow) {
+void dropAndAbsorb(double** ground, double amount, double ** absorption, int n, int startRow, int endRow, bool stillRain) {
     for(int i = startRow; i < endRow; i++){
         for(int j = 0; j < n; j++){
-            ground[i][j] += 1.0;
+            if(stillRain){
+                ground[i][j] += 1.0;
+            }
+            absorption[i][j] += ground[i][j] >= amount ? amount : ground[i][j];
+            ground[i][j] -= amount;
         }
     }
 }
@@ -116,8 +120,7 @@ void drop(double** ground, int n, int startRow, int endRow) {
 void absorb(double ** ground, double amount, double ** absorption, int n, int startRow, int endRow) {
     for(int i = startRow; i < endRow; i++){
         for(int j = 0; j < n; j++){
-            absorption[i][j] += ground[i][j] >= amount ? amount : ground[i][j];
-            ground[i][j] -= amount;
+            
         }
     }
 }
@@ -223,29 +226,18 @@ int main(int argc, char *argv[]) {
     // TODO TEST
     bool keepSimulate = true;
     while(keepSimulate){
-        if(currentStep < M){
+        bool stillRain = currentStep < M;
             // open threads
             std::vector<std::thread> threads2;
             for (int i = 0; i < P; i++) {
                 int startRow = i * workPerThread;
                 int endRow = (i + 1) * workPerThread;
-                threads2.push_back(std::thread(drop, totalAccumulation, N, startRow, endRow));
+                threads2.push_back(std::thread(dropAndAbsorb, totalAccumulation, A, absorption, N, startRow, endRow, stillRain));
             }
             for (int i = 0; i < P; i++) {
                 threads2[i].join();
             }
             // make sure all done before moving on
-        }
-        // open threads
-        std::vector<std::thread> threads3;
-        for (int i = 0; i < P; i++) {
-            int startRow = i * workPerThread;
-            int endRow = (i + 1) * workPerThread;
-            threads3.push_back(std::thread(absorb, totalAccumulation, A, absorption, N, startRow, endRow));
-        }
-        for (int i = 0; i < P; i++) {
-            threads3[i].join();
-        }
         // make sure all done before moving on
         keepSimulate = flow(totalAccumulation, direction, N);
         currentStep++;
