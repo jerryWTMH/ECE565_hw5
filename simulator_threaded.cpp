@@ -1,5 +1,5 @@
 #include "simulator_threaded.hpp"
-std::mutex mtx;
+// std::mutex mtx;
 
 int ** readElevationFile(const char * elevationFilename, int N) {
     FILE * elevationFile = fopen(elevationFilename, "r");
@@ -145,9 +145,9 @@ bool flow(double ** result, int *** direction, int n){
                     if(modularPos[k] >= 0){
                         int currX = modularPos[k]/n;
                         int currY = modularPos[k]%n;
-                        mtx.lock();
+                        // mtx.lock();
                         flowMatrix[currX][currY] += fractionDrop;
-                        mtx.unlock();
+                        // mtx.unlock();
                     }
                 }
                 flowMatrix[i][j] -= dropToFlow;
@@ -163,16 +163,10 @@ bool flow(double ** result, int *** direction, int n){
         }
     }
 
-    freeFlowMatrix(flowMatrix, n);
-    free(flowMatrix);
+    freeDoubleMatrix(flowMatrix, n);
     return wet;
 }
 
-void freeFlowMatrix(double ** flowMatrix, int n){
-    for(int i =0; i < n; i++){
-        free(flowMatrix[i]);
-    }
-}
 
 double ** initializeDoubleMatrix(int N) {
     double ** matrix = (double **)malloc(N * sizeof(*matrix));
@@ -207,14 +201,14 @@ int main(int argc, char *argv[]) {
     int ** elevation = readElevationFile(elevationFilename, N);
     int *** direction = initializeDirectionMatrix(N);
     // open threads
-    std::vector<std::thread> threads;
+    std::vector<std::thread> threads1;
     for (int i = 0; i < P; i++) {
         int startRow = i * workPerThread;
         int endRow = (i + 1) * workPerThread;
-        threads.push_back(std::thread(getDirection, direction, elevation, N, startRow, endRow));
+        threads1.push_back(std::thread(getDirection, direction, elevation, N, startRow, endRow));
     }
     for (int i = 0; i < P; i++) {
-        threads[i].join();
+        threads1[i].join();
     }
     // make sure all done before moving on
     double ** absorption = initializeDoubleMatrix(N);
@@ -231,26 +225,26 @@ int main(int argc, char *argv[]) {
     while(keepSimulate){
         if(currentStep < M){
             // open threads
-            std::vector<std::thread> threads;
+            std::vector<std::thread> threads2;
             for (int i = 0; i < P; i++) {
                 int startRow = i * workPerThread;
                 int endRow = (i + 1) * workPerThread;
-                threads.push_back(std::thread(drop, totalAccumulation, N, startRow, endRow));
+                threads2.push_back(std::thread(drop, totalAccumulation, N, startRow, endRow));
             }
             for (int i = 0; i < P; i++) {
-                threads[i].join();
+                threads2[i].join();
             }
             // make sure all done before moving on
         }
         // open threads
-        std::vector<std::thread> threads;
+        std::vector<std::thread> threads3;
         for (int i = 0; i < P; i++) {
             int startRow = i * workPerThread;
             int endRow = (i + 1) * workPerThread;
-            threads.push_back(std::thread(absorb, totalAccumulation, A, absorption, N, startRow, endRow));
+            threads3.push_back(std::thread(absorb, totalAccumulation, A, absorption, N, startRow, endRow));
         }
         for (int i = 0; i < P; i++) {
-            threads[i].join();
+            threads3[i].join();
         }
         // make sure all done before moving on
         keepSimulate = flow(totalAccumulation, direction, N);

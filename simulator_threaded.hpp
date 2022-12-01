@@ -17,10 +17,10 @@ void getDirection(int *** direction, int ** elevation, int N, int startRow, int 
 void findMinPostion(int *** direction, int ** elevation, int i, int j, int N);
 void freeDirection(int *** direction, int N);
 double ** initializeDoubleMatrix(int N);
+void freeDoubleMatrix(double ** matrix, int N);
 void drop(double** ground, int n, int startRow, int endRow);
 void absorb(double ** ground, double amount, double ** absorption, int n, int startRow, int endRow);
 bool flow(double ** result, int *** direction, int n);
-void freeFlowMatrix(double ** flowMatrix, int n);
 
 
 
