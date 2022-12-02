@@ -18,6 +18,6 @@ void findMinPostion(int *** direction, int ** elevation, int i, int j, int N);
 void freeDirection(int *** direction, int N);
 double ** initializeDoubleMatrix(int N);
 void freeDoubleMatrix(double ** matrix, int N);
-void dropAndAbsorb(double** ground, double amount, double ** absorption, int n, int startRow, int endRow, bool stillRain);
+void dropAndAbsorb(double** ground, double amount, double ** absorption, int n, int startRow, int endRow, bool stillRain, bool* wet, int *** direction);
 void absorb(double ** ground, double amount, double ** absorption, int n, int startRow, int endRow);
 void flow(double ** result, int *** direction, int n, bool* wet);

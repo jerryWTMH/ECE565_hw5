@@ -1,5 +1,11 @@
 #include "simulator_threaded.hpp"
 // std::mutex mtx;
+#include <mutex>
+
+std::mutex mtx;
+std::vector<std::vector<double>> flowMatrix;
+std::vector<std::vector<double>> tempFlowMatrix;
+std::vector<std::vector<double>> zeroFlowMatrix;
 
 int ** readElevationFile(const char * elevationFilename, int N) {
     FILE * elevationFile = fopen(elevationFilename, "r");
@@ -104,7 +110,7 @@ void freeDirection(int *** direction, int N) {
 }
 
 //TODO TEST
-void dropAndAbsorb(double** ground, double amount, double ** absorption, int n, int startRow, int endRow, bool stillRain) {
+void dropAndAbsorb(double** ground, double amount, double ** absorption, int n, int startRow, int endRow, bool stillRain, bool * wet, int *** direction) {
     for(int i = startRow; i < endRow; i++){
         for(int j = 0; j < n; j++){
             if(stillRain){
@@ -112,6 +118,39 @@ void dropAndAbsorb(double** ground, double amount, double ** absorption, int n, 
             }
             absorption[i][j] += ground[i][j] >= amount ? amount : ground[i][j];
             ground[i][j] -= amount;
+        }
+    }
+    for(int i = startRow; i < endRow; i++){
+        for(int j = 0; j < n; j++){
+            if(ground[i][j]>0){
+                *wet = true;
+                int * modularPos = direction[i][j];
+                int modularPosSize = 5;
+                double validSize = 0;
+                for(int p = 0; p < modularPosSize; p++){
+                    if(modularPos[p] >= 0){
+                        validSize++;
+                    }
+                } 
+                double dropToFlow = ground[i][j] >= 1.0 ? 1.0 : ground[i][j];
+                double fractionDrop = dropToFlow / validSize;
+                if(i==startRow || i==endRow-1){
+                    mtx.lock();
+                }
+                for(int k = 0; k < modularPosSize; ++k){
+                    if(modularPos[k] >= 0){
+                        int currX = modularPos[k]/n;
+                        int currY = modularPos[k]%n;
+                        tempFlowMatrix[currX][currY] += fractionDrop;
+                    }
+                }
+                if(i==startRow || i==endRow-1){
+                    mtx.unlock();
+                }
+                flowMatrix[i][j] -= dropToFlow;
+            }else{
+                ground[i][j] = 0.0;
+            }
         }
     }
 }
@@ -198,6 +237,9 @@ int main(int argc, char *argv[]) {
 
     int ** elevation = readElevationFile(elevationFilename, N);
     int *** direction = initializeDirectionMatrix(N);
+    flowMatrix = std::vector<std::vector<double>>(N, std::vector<double>(N, 0.0));
+    zeroFlowMatrix = std::vector<std::vector<double>>(N, std::vector<double>(N, 0.0));
+    tempFlowMatrix = std::vector<std::vector<double>>(N, std::vector<double>(N, 0.0));
     // open threads
     std::vector<std::thread> threads1;
     for (int i = 0; i < P; i++) {
@@ -221,21 +263,22 @@ int main(int argc, char *argv[]) {
     // TODO TEST
     bool keepSimulate = true;
     while(keepSimulate){
+        keepSimulate = false;
         bool stillRain = currentStep < M;
             // open threads
             std::vector<std::thread> threads2;
             for (int i = 0; i < P; i++) {
                 int startRow = i * workPerThread;
                 int endRow = (i + 1) * workPerThread;
-                threads2.push_back(std::thread(dropAndAbsorb, totalAccumulation, A, absorption, N, startRow, endRow, stillRain));
+                threads2.push_back(std::thread(dropAndAbsorb, totalAccumulation, A, absorption, N, startRow, endRow, stillRain, &keepSimulate,direction));
             }
             for (int i = 0; i < P; i++) {
                 threads2[i].join();
             }
             // make sure all done before moving on
         // make sure all done before moving on
-        keepSimulate = false;
-        flow(totalAccumulation, direction, N, &keepSimulate);
+        flowMatrix = tempFlowMatrix;
+        tempFlowMatrix = zeroFlowMatrix;
         currentStep++;
     }
     endTime = clock();
